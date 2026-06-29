@@ -1,0 +1,277 @@
+"use client";
+// app/pokemon/[pokemonname]/page.tsx
+import { use, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+    Box, Container, Typography, Chip, Grid, LinearProgress,
+    Button, Skeleton, Avatar, Card, CardContent, CardActionArea, Tooltip,
+} from "@mui/material";
+import { TYPE_HEX, STAT_META, PAGE_BG } from "@/lib/constants";
+
+/* ── Types ──────────────────────────────────────────────── */
+interface PokemonDetail {
+    id: number; name: string; height: number; weight: number;
+    types:     { type: { name: string } }[];
+    stats:     { base_stat: number; stat: { name: string } }[];
+    abilities: { ability: { name: string }; is_hidden: boolean }[];
+    sprites:   { front_default: string; other: { "official-artwork": { front_default: string } } };
+    cries:     { latest: string; legacy: string };
+}
+interface PokemonSpecies {
+    flavor_text_entries: { flavor_text: string; language: { name: string } }[];
+    genera:              { genus: string; language: { name: string } }[];
+    evolution_chain:     { url: string };
+}
+interface EvoStage { name: string; id: number }
+
+/* ── Helpers ─────────────────────────────────────────────── */
+function parseEvolution(chain: any): EvoStage[][] {
+    const stages: EvoStage[][] = [];
+    function walk(node: any, depth: number) {
+        const id = Number(node.species.url.split("/").filter(Boolean).pop());
+        (stages[depth] ??= []).push({ name: node.species.name, id });
+        node.evolves_to?.forEach((n: any) => walk(n, depth + 1));
+    }
+    walk(chain, 0);
+    return stages;
+}
+
+/* ── Skeleton ────────────────────────────────────────────── */
+function DetailSkeleton() {
+    const s = { bgcolor: "rgba(255,255,255,0.08)" };
+    return (
+        <Box sx={{ minHeight: "100vh", background: PAGE_BG, pt: 2 }}>
+            <Container maxWidth="md" sx={{ py: 4 }}>
+                <Skeleton variant="rounded" width={100} height={36} sx={s} />
+                <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, mt: 3 }}>
+                    <Skeleton variant="circular"  width={200}   height={200}  sx={s} />
+                    <Skeleton variant="text"      width="50%"   height={48}   sx={s} />
+                    <Skeleton variant="text"      width="30%"   height={28}   sx={s} />
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                        <Skeleton variant="rounded" width={80}    height={32}   sx={s} />
+                        <Skeleton variant="rounded" width={80}    height={32}   sx={s} />
+                    </Box>
+                    <Skeleton variant="rounded"   width="100%"  height={160}  sx={s} />
+                    <Skeleton variant="rounded"   width="100%"  height={200}  sx={s} />
+                </Box>
+            </Container>
+        </Box>
+    );
+}
+
+/* ── Page ────────────────────────────────────────────────── */
+export default function PokemonDetailPage({ params }: { params: Promise<{ pokemonname: string }> }) {
+    const { pokemonname } = use(params);
+    const router = useRouter();
+
+    const [pokemon,   setPokemon]   = useState<PokemonDetail | null>(null);
+    const [species,   setSpecies]   = useState<PokemonSpecies | null>(null);
+    const [evolution, setEvolution] = useState<EvoStage[][]>([]);
+    const [loading,   setLoading]   = useState(true);
+    const [error,     setError]     = useState(false);
+    const [crying,    setCrying]    = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        async function load() {
+            setLoading(true); setError(false);
+            try {
+                const [pokRes, spRes] = await Promise.all([
+                    fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonname}`),
+                    fetch(`https://pokeapi.co/api/v2/pokemon-species/${pokemonname}`),
+                ]);
+                if (!pokRes.ok) throw new Error("not found");
+                const [pok, sp]: [PokemonDetail, PokemonSpecies] = await Promise.all([pokRes.json(), spRes.json()]);
+                if (cancelled) return;
+                setPokemon(pok); setSpecies(sp);
+
+                const evo = await fetch(sp.evolution_chain.url).then(r => r.json());
+                if (!cancelled) setEvolution(parseEvolution(evo.chain));
+            } catch {
+                if (!cancelled) setError(true);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }
+        load();
+        return () => { cancelled = true; };
+    }, [pokemonname]);
+
+    const playCry = () => {
+        const url = pokemon?.cries?.latest || pokemon?.cries?.legacy;
+        if (!url) return;
+        const audio = new Audio(url);
+        setCrying(true);
+        audio.play().catch(console.error);
+        audio.onended = () => setCrying(false);
+    };
+
+    if (error) return (
+        <Box sx={{ minHeight: "100vh", background: PAGE_BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
+            <Typography variant="h4" sx={{ color: "#f0f2f8" }}>Pokémon not found</Typography>
+            <Button variant="contained" onClick={() => router.push("/")}
+                    sx={{ borderRadius: 999, px: 4, bgcolor: "#e5141a", "&:hover": { bgcolor: "#b01010" } }}>
+                ← Back to Pokédex
+            </Button>
+        </Box>
+    );
+
+    if (loading || !pokemon || !species) return <DetailSkeleton />;
+
+    const primaryType = pokemon.types[0]?.type.name ?? "normal";
+    const typeColor   = TYPE_HEX[primaryType] ?? "#A8A878";
+    const artwork     = pokemon.sprites.other["official-artwork"].front_default ?? pokemon.sprites.front_default;
+    const totalStats  = pokemon.stats.reduce((s, x) => s + x.base_stat, 0);
+    const flavorText  = species.flavor_text_entries.find(e => e.language.name === "en")
+        ?.flavor_text.replace(/[\n\f\r]/g, " ") ?? "";
+    const genus       = species.genera.find(g => g.language.name === "en")?.genus ?? "";
+
+    return (
+        <Box sx={{ minHeight: "100vh", background: PAGE_BG }}>
+
+            {/* ── Type-tinted hero ────────────────────────── */}
+            <Box sx={{ background: `linear-gradient(135deg, ${typeColor}BB 0%, ${typeColor}55 55%, transparent 100%)`, pt: { xs: 3, md: 5 }, pb: { xs: 4, md: 6 } }}>
+                <Container maxWidth="md">
+                    <Button onClick={() => router.back()} sx={{ color: "rgba(255,255,255,0.75)", fontWeight: 700, mb: 2, "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.1)" } }}>
+                        ← Back
+                    </Button>
+
+                    <Grid container spacing={3} sx={{ alignItems: "center" }}>
+                        {/* Artwork + cry */}
+                        <Grid size={{ xs: 12, sm: 5 }} sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                            <Box sx={{ width: { xs: 180, sm: 220, md: 260 }, height: { xs: 180, sm: 220, md: 260 }, bgcolor: "rgba(255,255,255,0.1)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 70px ${typeColor}55` }}>
+                                <Box component="img" src={artwork} alt={pokemon.name}
+                                     sx={{ width: "86%", height: "86%", objectFit: "contain", filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.45))" }} />
+                            </Box>
+                            <Tooltip title={crying ? "Playing…" : "Play cry"}>
+                                <Button onClick={playCry} disabled={crying} variant="outlined"
+                                        sx={{ borderRadius: 999, px: 3, color: "#fff", borderColor: "rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", "&:hover": { bgcolor: "rgba(255,255,255,0.15)" }, "&.Mui-disabled": { color: "rgba(255,255,255,0.4)" } }}>
+                                    {crying ? "🔊 Playing…" : "🔊 Play Cry"}
+                                </Button>
+                            </Tooltip>
+                        </Grid>
+
+                        {/* Info */}
+                        <Grid size={{ xs: 12, sm: 7 }}>
+                            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)", fontWeight: 700, letterSpacing: "0.12em", fontSize: "0.88rem" }}>
+                                #{String(pokemon.id).padStart(4, "0")}
+                            </Typography>
+                            <Typography variant="h2"
+                                        sx={{ color: "#f0f2f8", fontWeight: 900, textTransform: "capitalize", lineHeight: 1.05, mt: 0.5, mb: 0.75, fontSize: { xs: "2.2rem", md: "3rem" } }}>
+                                {pokemon.name}
+                            </Typography>
+                            {genus && <Typography sx={{ color: "rgba(255,255,255,0.55)", fontStyle: "italic", mb: 1.5 }}>{genus}</Typography>}
+
+                            {/* Types */}
+                            <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+                                {pokemon.types.map(({ type }) => (
+                                    <Chip key={type.name} label={type.name}
+                                          sx={{ bgcolor: TYPE_HEX[type.name] ?? "#777", color: "#fff", textTransform: "capitalize", fontWeight: 700, height: 28 }} />
+                                ))}
+                            </Box>
+
+                            {/* Flavor text */}
+                            {flavorText && (
+                                <Typography sx={{ color: "rgba(255,255,255,0.72)", lineHeight: 1.65, mb: 2.5, fontSize: "0.93rem" }}>
+                                    {flavorText}
+                                </Typography>
+                            )}
+
+                            {/* Height / Weight / Abilities */}
+                            <Grid container spacing={1.5}>
+                                {[{ label: "Height", value: `${(pokemon.height / 10).toFixed(1)} m` }, { label: "Weight", value: `${(pokemon.weight / 10).toFixed(1)} kg` }]
+                                    .map(({ label, value }) => (
+                                        <Grid size={{ xs: 6 }} key={label}>
+                                            <Box sx={{ bgcolor: "rgba(255,255,255,0.1)", borderRadius: 2, p: 1.5, textAlign: "center" }}>
+                                                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.45)", display: "block", textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.68rem" }}>
+                                                    {label}
+                                                </Typography>
+                                                <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: "1rem" }}>{value}</Typography>
+                                            </Box>
+                                        </Grid>
+                                    ))}
+                                <Grid size={{ xs: 12 }}>
+                                    <Box sx={{ bgcolor: "rgba(255,255,255,0.1)", borderRadius: 2, p: 1.5 }}>
+                                        <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.45)", display: "block", textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.68rem", mb: 0.5 }}>
+                                            Abilities
+                                        </Typography>
+                                        <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
+                                            {pokemon.abilities.map(({ ability, is_hidden }) => (
+                                                <Chip key={ability.name}
+                                                      label={`${ability.name}${is_hidden ? " (hidden)" : ""}`}
+                                                      size="small"
+                                                      sx={{ bgcolor: "rgba(255,255,255,0.13)", color: "#fff", textTransform: "capitalize", fontSize: "0.73rem" }} />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </Container>
+            </Box>
+
+            {/* ── Stats + Evolution ─────────────────────────── */}
+            <Container maxWidth="md" sx={{ py: 5 }}>
+                {/* Base stats */}
+                <Card sx={{ bgcolor: "rgba(255,255,255,0.06)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 3, p: { xs: 2.5, md: 4 }, mb: 3 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+                        <Typography variant="h5" sx={{ color: "#f0f2f8", fontWeight: 800 }}>Base Stats</Typography>
+                        <Chip label={`Total: ${totalStats}`} sx={{ bgcolor: typeColor, color: "#fff", fontWeight: 800 }} />
+                    </Box>
+                    {pokemon.stats.map(({ stat, base_stat }) => {
+                        const meta = STAT_META[stat.name] ?? { label: stat.name.toUpperCase(), color: "#999" };
+                        const pct  = Math.min((base_stat / 255) * 100, 100);
+                        return (
+                            <Box key={stat.name} sx={{ mb: 2 }}>
+                                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                                    <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.45)", fontWeight: 700, minWidth: 60, letterSpacing: "0.06em" }}>
+                                        {meta.label}
+                                    </Typography>
+                                    <Typography sx={{ color: "#f0f2f8", fontWeight: 800, fontSize: "0.92rem", minWidth: 36, textAlign: "right" }}>
+                                        {base_stat}
+                                    </Typography>
+                                </Box>
+                                <LinearProgress variant="determinate" value={pct}
+                                                sx={{ height: 8, borderRadius: 4, bgcolor: "rgba(255,255,255,0.07)", "& .MuiLinearProgress-bar": { bgcolor: meta.color, borderRadius: 4, transition: "transform 0.7s ease" } }} />
+                            </Box>
+                        );
+                    })}
+                </Card>
+
+                {/* Evolution chain */}
+                {evolution.length > 1 && (
+                    <Card sx={{ bgcolor: "rgba(255,255,255,0.06)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 3, p: { xs: 2.5, md: 4 } }}>
+                        <Typography variant="h5" sx={{ color: "#f0f2f8", fontWeight: 800, mb: 3 }}>Evolution</Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: { xs: 1, sm: 2 } }}>
+                            {evolution.map((stage, si) => (
+                                <Box key={si} sx={{ display: "flex", alignItems: "center", gap: { xs: 1, sm: 2 } }}>
+                                    {si > 0 && <Typography sx={{ color: "rgba(255,255,255,0.3)", fontSize: { xs: "1.4rem", sm: "2rem" } }}>→</Typography>}
+                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                                        {stage.map(({ name, id }) => (
+                                            <CardActionArea key={name} onClick={() => router.push(`/pokemon/${name}`)}
+                                                            sx={{ borderRadius: 3, p: 1.5, display: "flex", flexDirection: "column", alignItems: "center", minWidth: { xs: 72, sm: 88 }, bgcolor: name === pokemonname ? `${typeColor}28` : "transparent", border: `2px solid ${name === pokemonname ? typeColor : "transparent"}`, "&:hover": { bgcolor: "rgba(255,255,255,0.08)" }, transition: "all 0.2s" }}>
+                                                <Avatar src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`} alt={name}
+                                                        sx={{ width: { xs: 56, sm: 64 }, height: { xs: 56, sm: 64 }, bgcolor: "rgba(255,255,255,0.08)" }} />
+                                                <Typography variant="caption"
+                                                            sx={{ color: name === pokemonname ? "#fff" : "rgba(255,255,255,0.55)", textTransform: "capitalize", fontWeight: 700, textAlign: "center", mt: 0.5, fontSize: "0.68rem" }}>
+                                                    {name}
+                                                </Typography>
+                                            </CardActionArea>
+                                        ))}
+                                    </Box>
+                                </Box>
+                            ))}
+                        </Box>
+                    </Card>
+                )}
+
+                <Box sx={{ mt: 4, textAlign: "center" }}>
+                    <Button onClick={() => router.push("/")} sx={{ color: "rgba(240,242,248,0.4)", "&:hover": { color: "#fff" } }}>
+                        ← Back to all Pokémon
+                    </Button>
+                </Box>
+            </Container>
+        </Box>
+    );
+}
