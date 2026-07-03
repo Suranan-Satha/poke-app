@@ -35,19 +35,40 @@ function CardSkeleton() {
     );
 }
 
+/* ── 🥚 Secret entry (easter egg) ─────────────────────
+   Save your own Nergigante artwork into: public/secret/nergigante.png
+   (this app never hosts or generates Capcom's copyrighted art itself) */
+const SECRET_NERGIGANTE: Pokemon = {
+    id: 9999,
+    name: "nergigante",
+    types: [{ type: { name: "dragon" } }],
+    sprites: {
+        front_default: "/secret/nergigante.png",
+        other: { "official-artwork": { front_default: "/secret/nergigante.png" } },
+    },
+};
+
 /* ── Pokémon card ───────────────────────────────────── */
 function PokemonCard({ p }: { p: Pokemon }) {
+    const isSecret = p.name === "nergigante";
     const art   = p.sprites.other["official-artwork"].front_default ?? p.sprites.front_default;
-    const color = TYPE_HEX[p.types[0]?.type.name ?? "normal"] ?? "#A8A878";
+    const color = isSecret ? "#7038F8" : (TYPE_HEX[p.types[0]?.type.name ?? "normal"] ?? "#A8A878");
     return (
         <Card sx={{
             height: "100%", borderRadius: 3,
             bgcolor: "#fff",
             border: "1px solid rgba(0,0,0,0.06)",
             borderTop: `4px solid ${color}`,          /* type-colour top stripe */
-            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            boxShadow: isSecret ? "0 0 18px rgba(112,56,248,0.5)" : "0 2px 8px rgba(0,0,0,0.06)",
             transition: "transform 0.2s, box-shadow 0.2s",
-            "&:hover": { transform: "translateY(-5px)", boxShadow: `0 12px 28px rgba(0,0,0,0.12)` },
+            ...(isSecret && {
+                animation: "secretGlow 1.8s ease-in-out infinite",
+                "@keyframes secretGlow": {
+                    "0%, 100%": { boxShadow: "0 0 14px rgba(112,56,248,0.4)" },
+                    "50%":      { boxShadow: "0 0 30px rgba(112,56,248,0.85)" },
+                },
+            }),
+            "&:hover": { transform: "translateY(-5px)", boxShadow: isSecret ? "0 0 34px rgba(112,56,248,0.9)" : `0 12px 28px rgba(0,0,0,0.12)` },
         }}>
             <CardActionArea href={`/pokemon/${p.name}`} sx={{ height: "100%" }}>
                 <CardContent sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, py: 2.5, px: 2 }}>
@@ -55,8 +76,8 @@ function PokemonCard({ p }: { p: Pokemon }) {
                         component="img" src={art} alt={p.name} loading="lazy"
                         sx={{ width: 88, height: 88, objectFit: "contain", filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.12))" }}
                     />
-                    <Typography variant="caption" sx={{ color: "#9ca3af", fontWeight: 700, letterSpacing: "0.12em" }}>
-                        #{String(p.id).padStart(4, "0")}
+                    <Typography variant="caption" sx={{ color: isSecret ? "#7038F8" : "#9ca3af", fontWeight: 700, letterSpacing: "0.12em" }}>
+                        {isSecret ? "★ SECRET" : `#${String(p.id).padStart(4, "0")}`}
                     </Typography>
                     <Typography sx={{ color: "#111827", fontWeight: 700, textTransform: "capitalize", fontSize: "0.9rem", lineHeight: 1.2, textAlign: "center" }}>
                         {p.name}
@@ -155,6 +176,14 @@ export default function Home() {
         if (!query.trim()) { setResults([]); setNoResult(false); return; }
         const timer = setTimeout(async () => {
             const q = query.toLowerCase().trim();
+
+            /* 🥚 easter egg — bypasses PokeAPI entirely */
+            if (q === "nergigante") {
+                setNoResult(false);
+                setResults([SECRET_NERGIGANTE]);
+                return;
+            }
+
             const pool = selectedType ? typeMemberNames : allNames;
             const matches = pool.filter(p => p.name.includes(q)).slice(0, LIMIT);
             if (!matches.length) { setResults([]); setNoResult(true); return; }

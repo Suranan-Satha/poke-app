@@ -24,6 +24,42 @@ interface PokemonSpecies {
 }
 interface EvoStage { name: string; id: number }
 
+/* ── 🥚 Secret entry (easter egg) ─────────────────────
+   Save your own Nergigante artwork into: public/secret/nergigante.png
+   (this app never hosts or generates Capcom's copyrighted art itself) */
+const NERGIGANTE_POKEMON: PokemonDetail = {
+    id: 9999,
+    name: "nergigante",
+    height: 70,     // 7.0 m
+    weight: 6700,   // 670 kg
+    types: [{ type: { name: "dragon" } }],
+    stats: [
+        { base_stat: 200, stat: { name: "hp" } },
+        { base_stat: 230, stat: { name: "attack" } },
+        { base_stat: 180, stat: { name: "defense" } },
+        { base_stat: 90,  stat: { name: "special-attack" } },
+        { base_stat: 120, stat: { name: "special-defense" } },
+        { base_stat: 140, stat: { name: "speed" } },
+    ],
+    abilities: [
+        { ability: { name: "spike-regeneration" }, is_hidden: false },
+        { ability: { name: "elder-dragon-instinct" }, is_hidden: true },
+    ],
+    sprites: {
+        front_default: "/secret/nergigante.png",
+        other: { "official-artwork": { front_default: "/secret/nergigante.png" } },
+    },
+    cries: { latest: "/secret/nergigante-cry.mp3", legacy: "" },
+};
+const NERGIGANTE_SPECIES: PokemonSpecies = {
+    flavor_text_entries: [{
+        flavor_text: "An Elder Dragon that regenerates its spikes after every fight. You weren't supposed to find this one — congrats on the secret.",
+        language: { name: "en" },
+    }],
+    genera: [{ genus: "Elder Dragon Pokémon", language: { name: "en" } }],
+    evolution_chain: { url: "" },
+};
+
 /* ── Helpers ─────────────────────────────────────────── */
 function parseEvolution(chain: any): EvoStage[][] {
     const stages: EvoStage[][] = [];
@@ -111,6 +147,50 @@ function TiltArtwork({ src, alt, typeColor, size }: { src: string; alt: string; 
     );
 }
 
+/* ── 🥚 Synthesized roar (Web Audio API, no sample files) ──
+   Used as a fallback for the secret entry until a real cry file
+   is dropped into public/secret/nergigante-cry.mp3 */
+function playSynthRoar(onDone: () => void) {
+    try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+        const dur = 1.3;
+
+        // Layer 1 — deep pitch-dropping growl body
+        const osc = ctx.createOscillator();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(190, now);
+        osc.frequency.exponentialRampToValueAtTime(48, now + dur - 0.15);
+        const oscGain = ctx.createGain();
+        oscGain.gain.setValueAtTime(0.0001, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.5, now + 0.15);
+        oscGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+        // Layer 2 — filtered noise burst (breathy roar texture)
+        const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        const noise = ctx.createBufferSource();
+        noise.buffer = buf;
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = "bandpass";
+        noiseFilter.Q.value = 0.7;
+        noiseFilter.frequency.setValueAtTime(900, now);
+        noiseFilter.frequency.exponentialRampToValueAtTime(220, now + dur - 0.15);
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.0001, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.28, now + 0.2);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+        osc.connect(oscGain).connect(ctx.destination);
+        noise.connect(noiseFilter).connect(noiseGain).connect(ctx.destination);
+        osc.start(now); osc.stop(now + dur);
+        noise.start(now); noise.stop(now + dur);
+        osc.onended = () => { ctx.close(); onDone(); };
+    } catch (e) { console.error(e); onDone(); }
+}
+
 /* ── Loading skeleton ────────────────────────────────── */
 function DetailSkeleton() {
     return (
@@ -149,6 +229,16 @@ export default function PokemonDetailPage({ params }: { params: Promise<{ pokemo
         let cancelled = false;
         async function load() {
             setLoading(true); setError(false);
+
+            /* 🥚 easter egg — bypasses PokeAPI entirely */
+            if (pokemonname.toLowerCase() === "nergigante") {
+                setPokemon(NERGIGANTE_POKEMON);
+                setSpecies(NERGIGANTE_SPECIES);
+                setEvolution([]);
+                setLoading(false);
+                return;
+            }
+
             try {
                 const [pokRes, spRes] = await Promise.all([
                     fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonname}`),
@@ -169,9 +259,20 @@ export default function PokemonDetailPage({ params }: { params: Promise<{ pokemo
 
     const playCry = () => {
         const url = pokemon?.cries?.latest || pokemon?.cries?.legacy;
-        if (!url) return;
-        const audio = new Audio(url);
+        const secret = pokemon?.name === "nergigante";
         setCrying(true);
+
+        if (secret) {
+            const finish = () => setCrying(false);
+            const audio = new Audio(url);
+            audio.onended = finish;
+            audio.onerror = () => playSynthRoar(finish);          // no file yet → synth roar
+            audio.play().catch(() => playSynthRoar(finish));       // can't decode/play → synth roar
+            return;
+        }
+
+        if (!url) { setCrying(false); return; }
+        const audio = new Audio(url);
         audio.play().catch(console.error);
         audio.onended = () => setCrying(false);
     };
@@ -190,8 +291,9 @@ export default function PokemonDetailPage({ params }: { params: Promise<{ pokemo
     if (loading || !pokemon || !species) return <DetailSkeleton />;
 
     /* Derived values */
+    const isSecret      = pokemon.name === "nergigante";
     const primaryType  = pokemon.types[0]?.type.name ?? "normal";
-    const typeColor    = TYPE_HEX[primaryType] ?? "#A8A878";
+    const typeColor    = isSecret ? "#7038F8" : (TYPE_HEX[primaryType] ?? "#A8A878");
     const artwork      = pokemon.sprites.other["official-artwork"].front_default ?? pokemon.sprites.front_default;
     const totalStats   = pokemon.stats.reduce((s, x) => s + x.base_stat, 0);
     const flavorText   = species.flavor_text_entries.find(e => e.language.name === "en")
@@ -232,7 +334,8 @@ export default function PokemonDetailPage({ params }: { params: Promise<{ pokemo
                             />
 
                             {/* Cry button */}
-                            <Tooltip title={crying ? "Playing…" : "Play cry"}>
+                            {(pokemon.cries?.latest || pokemon.cries?.legacy) && (
+                                <Tooltip title={crying ? "Playing…" : "Play cry"}>
                 <span>   {/* span wrapper fixes Tooltip + disabled button warning */}
                     <Button onClick={playCry} disabled={crying} variant="outlined"
                             sx={{
@@ -244,13 +347,14 @@ export default function PokemonDetailPage({ params }: { params: Promise<{ pokemo
                     {crying ? "🔊 Playing…" : "🔊 Play Cry"}
                   </Button>
                 </span>
-                            </Tooltip>
+                                </Tooltip>
+                            )}
                         </Grid>
 
                         {/* Info */}
                         <Grid size={{ xs: 12, sm: 7 }}>
-                            <Typography variant="caption" sx={{ color: "#9ca3af", fontWeight: 700, letterSpacing: "0.12em", fontSize: "0.88rem" }}>
-                                #{String(pokemon.id).padStart(4, "0")}
+                            <Typography variant="caption" sx={{ color: isSecret ? "#7038F8" : "#9ca3af", fontWeight: 700, letterSpacing: "0.12em", fontSize: "0.88rem" }}>
+                                {isSecret ? "★ SECRET ENTRY" : `#${String(pokemon.id).padStart(4, "0")}`}
                             </Typography>
                             <Typography variant="h2"
                                         sx={{ color: "#111827", fontWeight: 900, textTransform: "capitalize", lineHeight: 1.05, mt: 0.5, mb: 0.75, fontSize: { xs: "2.2rem", md: "3rem" } }}>

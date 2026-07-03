@@ -1,5 +1,4 @@
 "use client";
-// app/about/page.tsx — removed Vercel link, classic light theme
 import {
     Box, Container, Typography, Card, CardContent,
     Avatar, Chip, Button, Divider, Grid, Link as MuiLink,
@@ -12,11 +11,11 @@ const DEV = {
     name:       "Suranan Satha",
     studentId:  "673450204-9",
     email:      "suranan.s@kkumail.com",
-    github:     "https://github.com/yourusername/pokedex",
-    course:     "Internet Application Development",
-    courseCode: "SC374002",
+    github:     "https://github.com/Suranan-Satha/poke-app.git",
+    course:     "Front-end Web Programming",
+    courseCode: "IN403101",
     curriculum: "Computer Science",
-    faculty:    "Faculty of Science",
+    faculty:    "Interdisciplinary Studies.",
     university: "Khon Kaen University",
 };
 
@@ -44,9 +43,6 @@ export default function AboutPage() {
 
     return (
         <Box sx={{ minHeight: "100vh", bgcolor: PAGE_BG }}>
-
-            // app/about/page.tsx
-
             {/* ── White hero banner ───────────────────────────── */}
             <Box sx={{
                 bgcolor: "#ffffff", // 1. เปลี่ยนเป็นพื้นหลังสีขาว
