@@ -20,15 +20,12 @@ export default function Navbar() {
         <AppBar
             position="sticky"
             sx={{
-                bgcolor: "rgba(6,8,15,0.92)",
-                backdropFilter: "blur(16px)",
-                borderBottom: "1px solid rgba(255,255,255,0.07)",
-                boxShadow: "none",
+                bgcolor: "#ffffff", // 1. เปลี่ยนพื้นหลังเป็นสีขาว
+                boxShadow: "0 2px 12px rgba(0,0,0,0.08)", // ปรับเงาให้ดูนุ่มขึ้น
             }}
         >
             <Container maxWidth="xl">
                 <Toolbar disableGutters sx={{ gap: 1, py: 0.5 }}>
-                    {/* Logo */}
                     <Typography
                         component={Link}
                         href="/"
@@ -38,15 +35,14 @@ export default function Navbar() {
                             fontWeight: 900,
                             letterSpacing: "-0.02em",
                             mr: 3,
-                            "& .pk": { color: "#e5141a" },
-                            "& .dx": { color: "#f0f2f8" },
+                            lineHeight: 1,
                         }}
                     >
-                        <span className="pk">Poké</span>
-                        <span className="dx">Dex</span>
+                        {/* 2. เปลี่ยนสีโลโก้ให้ตัดกับพื้นหลังสีขาว */}
+                        <Box component="span" sx={{ color: "#CC0000" }}>Poké</Box>
+                        <Box component="span" sx={{ color: "#111827" }}>Dex</Box>
                     </Typography>
 
-                    {/* Nav links */}
                     <Box sx={{ display: "flex", gap: 0.5 }}>
                         {NAV.map(({ href, label }) => (
                             <Button
@@ -54,12 +50,13 @@ export default function Navbar() {
                                 component={Link}
                                 href={href}
                                 sx={{
-                                    color: path === href ? "#ffd700" : "rgba(255,255,255,0.6)",
+                                    // 3. เปลี่ยนสีปุ่มเมนูต่างๆ
+                                    color:   path === href ? "#CC0000" : "#6b7280",
                                     fontWeight: path === href ? 700 : 500,
                                     borderRadius: 999,
                                     px: 2,
-                                    bgcolor: path === href ? "rgba(255,215,0,0.1)" : "transparent",
-                                    "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.08)" },
+                                    bgcolor: path === href ? "rgba(204,0,0,0.08)" : "transparent",
+                                    "&:hover": { color: "#111827", bgcolor: "rgba(0,0,0,0.04)" },
                                     transition: "all 0.18s",
                                     fontSize: "0.88rem",
                                 }}

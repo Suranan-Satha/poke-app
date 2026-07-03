@@ -18,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CssBaseline />
         <Navbar />
         {children}
-      </AppRouterCacheProvider>
+      </AppRouterCacheProvider> 
       </body>
       </html>
   );

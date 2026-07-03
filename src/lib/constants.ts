@@ -1,5 +1,4 @@
-
-
+// lib/constants.ts
 export const TYPE_HEX: Record<string, string> = {
     normal:   "#A8A878", fire:     "#F08030", water:    "#6890F0",
     electric: "#F8D030", grass:    "#78C850", ice:      "#98D8D8",
@@ -21,5 +20,8 @@ export const STAT_META: Record<string, { label: string; color: string }> = {
 export const LIMIT = 24;
 export const TOTAL = 1351;
 
-/** New deep-space navy background — replaces the purple gradient */
-export const PAGE_BG = "linear-gradient(160deg, #06080f 0%, #0d1220 45%, #06080f 100%)";
+/** Classic Pokémon — light gray page background */
+export const PAGE_BG = "#f4f4f4";
+
+/** Pokémon red — primary brand color */
+export const POKE_RED = "#CC0000";
