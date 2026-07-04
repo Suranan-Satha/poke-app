@@ -22,10 +22,11 @@ A full-featured Pokédex web app built with **Next.js 15**, **Material UI v6**, 
 
 ## 📸 Screenshots
 
+<!-- แคปหน้าจอเว็บที่รันจริงแล้วใส่ในโฟลเดอร์ /src/picture (ตามที่มีอยู่แล้วในโปรเจกต์) -->
 
 | Home | Pokémon Detail | About |
 |---|---|---|
-| ![Home](./picture/home.png) | ![Detail](./picture/detail.png) | ![About](./picture/about.png) |
+| ![Home](./src/picture/home.png) | ![Detail](./src/picture/detail.png) | ![About](./src/picture/about.png) |
 
 ---
 
@@ -67,15 +68,17 @@ Then open [http://localhost:3000](http://localhost:3000) in your browser.
 ## 📂 Project Structure
 
 ```
-app/
- ├─ page.tsx                  # Home — paginated grid, search, type filter
- ├─ about/page.tsx            # About this project
- ├─ pokemon/[pokemonname]/    # Pokémon detail page
- └─ layout.tsx                # Root layout, navbar, theme
-components/
- └─ Navbar.tsx
-lib/
- └─ constants.ts              # Type colors, stat metadata, shared constants
+src/
+ ├─ app/
+ │   ├─ page.tsx                  # Home — paginated grid, search, type filter
+ │   ├─ about/page.tsx            # About this project
+ │   ├─ pokemon/[pokemonname]/    # Pokémon detail page
+ │   └─ layout.tsx                # Root layout, navbar, theme
+ ├─ components/
+ │   └─ Navbar.tsx
+ ├─ lib/
+ │   └─ constants.ts              # Type colors, stat metadata, shared constants
+ └─ picture/                      # Screenshots used in this README
 ```
 
 ## 📄 Credits
