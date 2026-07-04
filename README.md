@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PokéDex
 
-## Getting Started
+A full-featured Pokédex web app built with **Next.js 15**, **Material UI v6**, and the **PokéAPI** — browse all 1,351 Pokémon with real-time search, type filtering, detailed stat pages, evolution chains, and cry sounds.
 
-First, run the development server:
+🔗 **Live demo:** [poke-app-neon.vercel.app](https://poke-app-neon.vercel.app/)
+
+---
+
+## 👤 Developer
+
+| | |
+|---|---|
+| **Name** | Suranan Satha |
+| **Student ID** | 673450204-9 |
+| **Course** | Front-end Web Programming (IN403101) |
+| **Curriculum** | Computer Science |
+| **Faculty** | Interdisciplinary Studies |
+| **University** | Khon Kaen University |
+| **Email** | suranan.s@kkumail.com |
+
+---
+
+## 📸 Screenshots
+
+
+| Home | Pokémon Detail | About |
+|---|---|---|
+| ![Home](./picture/home.png) | ![Detail](./picture/detail.png) | ![About](./picture/about.png) |
+
+---
+
+## ✨ Features
+
+- **Paginated fetching** — loads 24 Pokémon per request (`limit`/`offset`) instead of pulling all 1,351 at once, with a "Load More" button to continue
+- **Real-time search** — debounced client-side search across all Pokémon names
+- **Type filter** — filter the grid by any of the 18 Pokémon types, combinable with search
+- **Detail page** — name, official artwork with a mouse-reactive 3D tilt/parallax effect, base stats (animated bars + total), full evolution chain, type chips, and an official cry sound player
+- **Loading skeletons** — [MUI Skeleton](https://mui.com/material-ui/react-skeleton/) components on every screen that fetches data, so the layout never jumps around while loading
+- **About page** — developer info, tech stack, and a link back to this repository
+- **Responsive design** — built with MUI's Grid breakpoint system (`xs`/`sm`/`md`/`lg`), works from mobile to desktop
+
+## 🛠️ Tech Stack
+
+- [Next.js 15](https://nextjs.org/) (App Router)
+- [React 19](https://react.dev/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Material UI v6](https://mui.com/)
+- [PokéAPI](https://pokeapi.co/)
+- [Vercel](https://vercel.com/) (deployment)
+
+## 🚀 Getting Started
 
 ```bash
+# clone the repo
+git clone https://github.com/Suranan-Satha/poke-app.git
+cd poke-app
+
+# install dependencies
+npm install
+
+# run the dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📂 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+ ├─ page.tsx                  # Home — paginated grid, search, type filter
+ ├─ about/page.tsx            # About this project
+ ├─ pokemon/[pokemonname]/    # Pokémon detail page
+ └─ layout.tsx                # Root layout, navbar, theme
+components/
+ └─ Navbar.tsx
+lib/
+ └─ constants.ts              # Type colors, stat metadata, shared constants
+```
 
-## Learn More
+## 📄 Credits
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Data provided by [PokéAPI](https://pokeapi.co).
+Pokémon © Nintendo / Game Freak / Creatures Inc. This is a non-commercial student project made for educational purposes only.
