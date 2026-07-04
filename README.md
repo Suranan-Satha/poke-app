@@ -49,22 +49,6 @@ A full-featured Pokédex web app built with **Next.js 15**, **Material UI v6**, 
 - [PokéAPI](https://pokeapi.co/)
 - [Vercel](https://vercel.com/) (deployment)
 
-## 🚀 Getting Started
-
-```bash
-# clone the repo
-git clone https://github.com/Suranan-Satha/poke-app.git
-cd poke-app
-
-# install dependencies
-npm install
-
-# run the dev server
-npm run dev
-```
-
-Then open [http://localhost:3000](http://localhost:3000) in your browser.
-
 ## 📂 Project Structure
 
 ```
